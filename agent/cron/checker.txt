@@ -1,0 +1,2 @@
+Check channel:1559429768112250920 on discord and if the last message from you (user 1559371503047278744) was more than 20 minutes ago, ping @AIRAN-maintainer (role 1559380480732696726) in channel:1559369819755909242 to let them know something went wrong.
+Only send a message if there is something to report. If there is no problem, do not disturb the users.
