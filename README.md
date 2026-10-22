@@ -10,7 +10,7 @@ PoC project for MITLab at NTUST under Taiwanese IIPP.
 All relevant scripts and config files are in [agent](agent/) folder.
 [config](agent/config/) contains core files for the AI agent, [cron](agent/cron/) contains files for setting up the two cron jobs described in the report.
 
-If the agent is not running and should be, refer to [the other doc](agent_doc.md#troubleshooting-the-agent).
+If the agent is not running and should be, refer to [the other doc](agent_troubleshoot.md).
 
 To get to the dashboard, it should be possible to just open the browser (on the Spark) and go to `127.0.0.1:18789` or `127.0.0.1:18790`. The page is likely to ask for a token, which can be obtained by typing
 ```bash
@@ -21,7 +21,7 @@ in Spark terminal (host, outside of the sandbox).
 To set up a new agent, prepare a model host and do `nemoclaw onboard`.
 The following sections should contain everything needed to go through the interactive onboarding towards our result.
 
-Once the sandbox is set up, use the core files in [agent_config](/agent_config/) to remove all the context bloat, emoji answers and so on.
+Once the sandbox is set up, use the core files in [agent/config](/agent/config/) to remove all the context bloat, emoji answers and so on.
 
 Check `/sandbox/.openclaw/openclaw.json` and see if `skipBootstrap` is set to `false` and if `contextWindow` and `maxTokens` are set to your model host parameters.
 
@@ -84,7 +84,7 @@ There are two ways, either use dashboard GUI or use `openclaw cron` in CLI (insi
 #### In GUI
 
 > [!CAUTION]
-> This option requires a fixed typed out prompt, which a waste of resources given the file manipulation can be solved with a [simple bash script](/scripts/sandbox/infer_cron.sh).
+> This option requires a fixed typed out prompt, which a waste of resources given the file manipulation can be solved with a [simple bash script](/agent/cron/infer_cron.sh).
 > It is highly recommended to skip this section and go straight to [CLI job creation](#in-cli).
 
 This is quite simple. Open the dashboard and go to "Cron Jobs":
@@ -214,6 +214,20 @@ Add discord as a channel and rebuild.
 nemoclaw ayran-sgl channels add discord
 nemoclaw ayran-sgl rebuild                  # if not done while adding channel
 ```
+
+#### Once Set Up
+
+Once set up, and running, the bot should drop messages to the channel.
+
+![Discord log channel](img/discord_log.png)
+
+If set up properly, the bot can ping users and roles to ask for intervention.
+
+![Discord notification](img/discord_notif.png)
+
+The bot is an interface to the agent, so users can directly interact with the agent through the channel.
+
+![User nteraction](img/discord_interaction.png)
 
 ## OpenAirInterface
 
