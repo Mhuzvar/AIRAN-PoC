@@ -559,6 +559,102 @@ Follow this steps to achieve 5G connectivity in test environment on spark
 
   ![Image 7](/img/reconnect-in-tunnel.png)
 
+## Changed files in the simulation environment
+
+Sitting inside the modified_files folder, there are some vital code files that were modified during the testing of the utility.
+
+| # | File | Change |
+|---|------|--------|
+| 1 | `radio/rfsimulator/simulator.cpp` | Fix for the `Sockmutex` deadlock in `rfsimulator_write_internal`: active sockets are copied while holding the mutex, the write itself is performed without it. Multithreading (`RfsimChanPool`) was added and later reverted to the single-threaded version, with the `thread-pool.h` and `task_ans.h` includes removed. |
+| 2 | `openair1/SIMULATION/TOOLS/random_channel.c` | Missing allocation of `Doppler_phase_cur`; `channel_length` changed from `uint8_t` to `uint32_t`; corrected `Td` units (SCM_C); `randominit()` added before `load_channellist()`; fix for `DS_TDL=0` when the channel is loaded from a `.conf` file; fix for the cumulative modification of `tdl_delays`. |
+| 3 | `openair1/SIMULATION/TOOLS/sim.h` | `channel_length` changed from `uint8_t` to `uint32_t`. |
+| 4 | `openair1/PHY/impl_defs_top.h` | `AMP_SHIFT` changed from 9 to 11 (UE UL amplitude ~+12 dB). Requires rebuilding the UE Docker image. |
+| 5 | `openair2/LAYER2/NR_MAC_gNB/gNB_scheduler_primitives.c` | Shorter timers: `UL_FAILURE_REQ_GRACE` 10000 → 2000 ms, `UL_FAILURE_TIMEOUT` 30000 → 5000 ms. |
+| 6 | `openair2/LAYER2/NR_MAC_gNB/mac_rrc_dl_handler.c` | RLF handler: sends the ITTI message `NR_RRC_RLC_MAXRTX`; the table is protected by a mutex to guard against duplicates. |
+| 7 | `openair2/RRC/NR/rrc_gNB.c` | Receiving side of the RLF handler: `rrc_remove_ue` and `nr_mac_release_ue`. |
+| 8 | `CMakeLists.txt` | `-O3 -ftree-vectorize` flags for the `rfsimulator`. The exact `CMakeLists.txt` is not recorded. |
+
+Important notes Notes
+
+- Change 4 affects the UE build only; the UE Docker image has to be rebuilt
+  after applying it, otherwise the amplitude change will not take effect.
+- Changes 5–7 work together: the shortened timers only shorten the detection
+  window, while the actual UE release path is completed by the handlers in
+  `mac_rrc_dl_handler.c` and `rrc_gNB.c`.
+
+## Configuration file
+
+Also in the modified_files folder there is an "gnb.sa.band78.fr1.106PRB.usrpb210.conf" file, which is an default config file used by OAI in their test scenarios.
+
+What was changed here?
+
+    channelmod = {
+      max_chan = 10;
+      modellist = "modellist_rfsimu_1";
+      modellist_rfsimu_1 = (
+        { model_name = "rfsimu_channel_ue1"  
+          type = "TDL_C";         
+          ds_tdl = 0.1;
+          noise_power_dB = -100;
+        },
+        { model_name = "rfsimu_channel_ue2" 
+          type = "TDL_C";
+          ds_tdl = 0.1;
+          noise_power_dB = -100;
+        }
+
+Channelmod section was activated, creating a channel list and setting them up to TDL_C and creating a channel instances for UE's.
+
+        
+    RUs = (
+    {
+      local_rf       = "yes"
+      nb_tx          = 2
+      nb_rx          = 2
+      att_tx         = 12;
+      att_rx         = 12;
+      bands          = [78];
+      max_pdschReferenceSignalPower = -27;
+      max_rxgain                    = 114;
+      eNB_instances  = [0];
+      clock_src = "internal";
+    }
+    );
+
+RU's has been set for 2x2 MIMO,
+
+    L1s = (
+    {
+      tr_n_preference       = "local_mac";
+      prach_dtx_threshold   = 120;
+      pucch0_dtx_threshold  = 100;
+      ofdm_offset_divisor   = 8; #set this to UINT_MAX for offset 0
+      tx_amp_backoff_dB     = 36;  # obnizone z domyslnych 36dB - zwieksza budzet lacza w rfsim
+    }
+    );
+
+tx_amp_backoff_dB power was tampered with to fit the Agent operations,
+
+Smaller changes also included:
+
+ Section | Parameter | Value | Purpose |
+|---------|-----------|-------|---------|
+| `plmn_list` | `mcc` / `mnc` | 208 / 99 (default 001/01 commented out) | Match core network / UE SIM |
+| Physical parameters | `pdsch_AntennaPorts_N1`, `pusch_AntennaPorts`, `maxMIMO_layers` | 2 / 2 / 2 | 2x2 MIMO |
+| `RUs` | `nb_tx`, `nb_rx` | 2 / 2 | 2x2 MIMO |
+| AMF | `amf_ip_address` | 192.168.71.132 | rfsim Docker network |
+| `NETWORK_INTERFACES` | interface / IP | `rfsim5g-public` / 192.168.71.129 (old block commented out) | rfsim Docker network |
+| `MACRLCs` | `dl_bler_target`, `ul_bler_target` | 0.10 / 0.10 | BLER targets for link adaptation |
+| `L1s` | `tx_amp_backoff_dB` | **36** (default; earlier tuned to 10) | DL digital TX backoff, see note below |
+| `rfsimulator` | section added: `options = ("chanmod")`, `modelname`, `IQfile` | – | Enable rfsimulator channel models |
+| `rfsimulator` | `enable_beams = 0`, `num_concurrent_beams = 1`, `beam_gains = "17.0"` | disabled | Simulated gNB antenna gain (17 dB caused saturation, kept off) |
+| `channelmod` | `max_chan = 10`, models `rfsimu_channel_ue1` / `ue2` | `type = "TDL_C"`, `ds_tdl = 0.1`, `noise_power_dB = -100` | Per-UE channel; ue3–ue9 commented out |
+| `e2_agent` | `near_ric_ip_addr`, `sm_dir` | `127.0.0.1`, `/usr/local/lib/flexric/` | FlexRIC E2 agent |
+
+Unchanged (OAI defaults) but relevant: `att_tx/att_rx = 12`, `max_rxgain = 114`,
+`pusch_TargetSNRx10 = 150`, `pucch_TargetSNRx10 = 200`, `p0_NominalWithGrant = -90`,
+`pMax = 20` (→ PCMAX 20 dBm in the gNB log).
+
 ## Integration
 
 [spark_host](spark_host/) folder contains scripts to deploy once OAI and NemoClaw is set up.
