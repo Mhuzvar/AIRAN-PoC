@@ -459,11 +459,11 @@ Follow this steps to achieve 5G connectivity in test environment on spark
 
   Sitting inside of the ~/scripts folder - you can find a file that does the connecting and performing an iperf3 test for you inside the:
 
-    run_ue_test.sh
+    ./ue_manager.py
 
   You can utilize it using the:
 
-    ./run_ue_test.sh <Number of UE-containers to run>
+    pyrhon3 ./ue_manager <Number of UE-containers to run>
 
   It takes a whole terminal window to process logs but you can also run it in the background - after shutting down it should turn off the UE containers - but check with      the ps command and kill it if it doesn't stop.
 
