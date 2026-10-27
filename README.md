@@ -231,6 +231,17 @@ The bot is an interface to the agent, so users can directly interact with the ag
 
 ## OpenAirInterface
 
+Building:
+
+After downloading the repo from eurecom.fr, get to the cmake_targets folder and run:
+
+    ./build_oai -w SIMU --gNB --nrUE --build-lib "telnetsrv nrscope" --ninja
+
+-w SIMU enables the RF-Simmulation model to be built alongside the RAN compoments
+--gNB - build the gNodeB utility executable file
+--nrUE - builds the UE executable file needed to be later on tranfered into oai-multi-ue folder
+--buildlib "telnetsrv nrscope" - enables the telneserver and nrscope utilities
+
 Follow this steps to achieve 5G connectivity in test environment on spark
 
 1. CORE NETWORK CONTAINERS 
@@ -657,7 +668,7 @@ Unchanged (OAI defaults) but relevant: `att_tx/att_rx = 12`, `max_rxgain = 114`,
 
 ## Integration
 
-[spark_host](spark_host/) folder contains scripts to deploy once OAI and NemoClaw is set up.
+[spark_host](spark_host/) folder contains scripts to deploy once OAI and NemoClaw is set up, also containing scripts for managing the simulation.
 
 ### [base_station.py](spark_host/base_station.py)
 
@@ -672,3 +683,25 @@ Theoretically should call an API, but actually steers via telnet.
 ### [agent/cron/infer_cron.sh](agent/cron/infer_cron.sh)
 
 Checks /tmp (inside the agent sandbox) for new files matching diagdata_\<date\>.csv and and sends the path to the model if new one is found. Dumps the answer to /sandbox/agent_responses/response_\<date\>.json.
+
+### [ue_manager.py](spark_host/ue_manager.py)
+
+Starts and supervises the simulated UEs (Docker containers `oai-ue1` … `oai-ueN` from the `oai-multi-ue` docker-compose) and generates traffic on them. On start it shuts down old containers and brings up the requested number of UEs. Then, per UE, one thread monitors the `oaitun_ue1` tunnel every 5 s, logging IP and RX/TX byte counts. It recreates missing containers and restarts a UE whose tunnel stays missing for 15 checks after the first connection. A second thread runs 30 s downlink iperf3 sessions (`-R`, 20 Mbit/s) against a random server from `iperf3_server_list.txt` (format `host;port`), logging to `iperf_logs/ue<N>.log`.
+Run as `python ue_manager.py <number_of_UEs>`. `Ctrl+C` stops all UEs. The compose file path (`COMPOSE_PATH`) is hardcoded and may vary on your OAI build specifics.
+
+### [city_mobility.py](spark_host/city_mobility.py)
+
+Simulates pedestrian UE mobility in an urban cell by changing the path loss of each UE channel. Every UE does a random walk with momentum: steps of up to 10 m, keeping the same direction for 3–8 steps. Distance is converted to real path loss with the 3GPP TR 38.901 UMi Street Canyon NLOS model (f_c = 3.6192 GHz). That value is then shifted by a constant offset (path loss at 10 m, ≈ 69.6 dB) and clamped to 0–15 dB before being applied via `channelmod modify <ch> ploss <value>`. The walking range (10–26.6 m) follows from that 15 dB limit. Steps are paced in simulated time (synchronised with the live gNB log), and telnet access is coordinated with other processes through a lock file (`/tmp/sbx_iface_API.lock`, stale locks are removed). Every step is logged to a CSV (`timestamp, ue_index, channel_id, distance_m, pl_real_dB, ploss_dB, lock_wait_s`), which serves as ground truth for evaluation.
+Run as `python city_mobility.py --ues 2 --interval 2.0`. Optional: `--log`, `--gnb-log` (default `/tmp/gnb_log.txt`), `--lock-file`, `--lock-timeout`, `--stale-after`, `--no-claim-lock`.
+
+### [noise_power.py](spark_host/noise_power.py)
+
+Injects controlled interference on a single UE channel, which is the anomaly the agent is supposed to detect. It sets a baseline noise level (−105 dBm), ramps `noise_power_dB` up in steps (−90 → −50 dBm), ramps it back down, and returns to baseline. Each step lasts a fixed amount of simulated time (default 8 s). Only noise is changed, so it can run alongside `city_mobility.py`. Before each telnet call it waits for the shared lock file to be released, and with `--claim-lock` it also holds the lock itself. With `--log` every change is written to a CSV (`timestamp, channel_id, event, value`), used as ground truth for evaluation.
+Run as `python noise_power.py --channel-id 0`. Optional: `--step-delay`, `--settle-delay`, `--log`, `--log-append`, `--gnb-log`, `--lock-file`, `--lock-timeout`, `--claim-lock`.
+
+### Helper modules: [slot_clock.py](spark_host/slot_clock.py), [oai_telnet.py](spark_host/oai_telnet.py)
+
+Shared helpers used by `city_mobility.py` and `noise_power.py`:
+- **slot_clock.py**: measures *simulated* time, which runs much slower than wall-clock time in rfsimulator. It tails the live gNB log and counts `[NR_MAC] Frame.Slot` lines, each of which marks 128 slots (64 ms at numerology 1), and `wait_sim_seconds(x)` blocks until `x` seconds of simulated time have passed. Running `python slot_clock.py [gnb_log]` on its own measures the current slowdown factor.
+- **oai_telnet.py**: minimal client for the gNB telnet server (`127.0.0.1:9090`, gNB started with `--telnetsrv`). It provides `send_command()`, `channelmod_modify(channel_id, param, value)` and `channelmod_show_current()`. Running `python oai_telnet.py` on its own prints the current channel model settings.
+
