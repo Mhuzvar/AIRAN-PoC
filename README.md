@@ -240,7 +240,7 @@ TBA
 ### [base_station.py](spark_host/base_station.py)
 
 Runs the base station and picks up the diagnostic data. Every _x_ minutes, it dumps the whole thing into a .txt file.
-Run as `python RANalyzer.py sudo cgexec -g cpuset:oai_gnb path/to/oai/openairinterface5g/cmake_targets/ran_build2/build/nr-softmodem -O path/to/gnb/CONF.conf --rfsim --telnetsrv`.
+Run as `python base_station.py sudo cgexec -g cpuset:oai_gnb path/to/oai/openairinterface5g/cmake_targets/ran_build2/build/nr-softmodem -O path/to/gnb/CONF.conf --rfsim --telnetsrv`. Specific path may vary on your OAI build specifics.
 
 ### [sbx_iface.py](spark_host/sbx_iface.py)
 
