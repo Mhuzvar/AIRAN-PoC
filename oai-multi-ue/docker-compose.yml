@@ -1,0 +1,313 @@
+services:
+  ue1:
+    image: oai-ue-test
+    container_name: oai-ue1
+    hostname: oai-ue1
+    privileged: true
+    volumes:
+    - ./ue1.conf:/opt/oai/ue.conf:ro
+    - ./uecap_ports2.xml:/opt/oai/uecap_ports2.xml:ro
+    networks:
+      ue_net:
+        ipv4_address: 172.30.0.11
+    command:
+    - /opt/oai/nr-uesoftmodem
+    - --rfsim
+    - -r
+    - '106'
+    - --numerology
+    - '1'
+    - --band
+    - '78'
+    - -C
+    - '3619200000'
+    - --ssb
+    - '516'
+    - --rfsimulator.serveraddr
+    - 192.168.1.85
+    - --ue-nb-ant-tx
+    - '2'
+    - --ue-nb-ant-rx
+    - '2'
+    - -O
+    - /opt/oai/ue.conf
+    - --uecap_file 
+    - /opt/oai/uecap_ports2.xml
+  ue2:
+    image: oai-ue-test
+    container_name: oai-ue2
+    hostname: oai-ue2
+    privileged: true
+    volumes:
+    - ./ue2.conf:/opt/oai/ue.conf:ro
+    - ./uecap_ports2.xml:/opt/oai/uecap_ports2.xml:ro
+    networks:
+      ue_net:
+        ipv4_address: 172.30.0.12
+    command:
+    - /opt/oai/nr-uesoftmodem
+    - --rfsim
+    - -r
+    - '106'
+    - --numerology
+    - '1'
+    - --band
+    - '78'
+    - -C
+    - '3619200000'
+    - --ssb
+    - '516'
+    - --rfsimulator.serveraddr
+    - 192.168.1.85
+    - --ue-nb-ant-tx
+    - '2'
+    - --ue-nb-ant-rx
+    - '2'
+    - -O
+    - /opt/oai/ue.conf
+    - --uecap_file 
+    - /opt/oai/uecap_ports2.xml
+  ue3:
+    image: oai-ue-test
+    container_name: oai-ue3
+    hostname: oai-ue3
+    privileged: true
+    volumes:
+    - ./ue3.conf:/opt/oai/ue.conf:ro
+    - ./uecap_ports2.xml:/opt/oai/uecap_ports2.xml:ro
+    networks:
+      ue_net:
+        ipv4_address: 172.30.0.13
+    command:
+    - /opt/oai/nr-uesoftmodem
+    - --rfsim
+    - -r
+    - '106'
+    - --numerology
+    - '1'
+    - --band
+    - '78'
+    - -C
+    - '3619200000'
+    - --ssb
+    - '516'
+    - --rfsimulator.serveraddr
+    - 192.168.1.85
+    - --ue-nb-ant-tx
+    - '2'
+    - --ue-nb-ant-rx
+    - '2'
+    - -O
+    - /opt/oai/ue.conf
+    - --uecap_file 
+    - /opt/oai/uecap_ports2.xml
+  ue4:
+    hostname: oai-ue4
+    image: oai-ue-test
+    container_name: oai-ue4
+    privileged: true
+    volumes:
+    - ./ue4.conf:/opt/oai/ue.conf:ro
+    - ./uecap_ports2.xml:/opt/oai/uecap_ports2.xml:ro
+    networks:
+      ue_net:
+        ipv4_address: 172.30.0.14
+    command:
+    - /opt/oai/nr-uesoftmodem
+    - --rfsim
+    - -r
+    - '106'
+    - --numerology
+    - '1'
+    - --band
+    - '78'
+    - -C
+    - '3619200000'
+    - --ssb
+    - '516'
+    - --rfsimulator.serveraddr
+    - 192.168.1.85
+    - --ue-nb-ant-tx
+    - '2'
+    - --ue-nb-ant-rx
+    - '2'
+    - -O
+    - /opt/oai/ue.conf
+    - --uecap_file 
+    - /opt/oai/uecap_ports2.xml
+  ue5:
+    image: oai-ue-test
+    container_name: oai-ue5
+    hostname: oai-ue5
+    privileged: true
+    volumes:
+    - ./ue5.conf:/opt/oai/ue.conf:ro
+    - ./uecap_ports2.xml:/opt/oai/uecap_ports2.xml:ro
+    networks:
+      ue_net:
+        ipv4_address: 172.30.0.15
+    command:
+    - /opt/oai/nr-uesoftmodem
+    - --rfsim
+    - -r
+    - '106'
+    - --numerology
+    - '1'
+    - --band
+    - '78'
+    - -C
+    - '3619200000'
+    - --ssb
+    - '516'
+    - --rfsimulator.serveraddr
+    - 192.168.1.85
+    - --ue-nb-ant-tx
+    - '2'
+    - --ue-nb-ant-rx
+    - '2'
+    - -O
+    - /opt/oai/ue.conf
+    - --uecap_file 
+    - /opt/oai/uecap_ports2.xml
+  ue6:
+    image: oai-ue-test
+    container_name: oai-ue6
+    hostname: oai-ue6
+    privileged: true
+    volumes:
+    - ./ue6.conf:/opt/oai/ue.conf:ro
+    - ./uecap_ports2.xml:/opt/oai/uecap_ports2.xml:ro
+    networks:
+      ue_net:
+        ipv4_address: 172.30.0.16
+    command:
+    - /opt/oai/nr-uesoftmodem
+    - --rfsim
+    - -r
+    - '106'
+    - --numerology
+    - '1'
+    - --band
+    - '78'
+    - -C
+    - '3619200000'
+    - --ssb
+    - '516'
+    - --rfsimulator.serveraddr
+    - 192.168.1.85
+    - --ue-nb-ant-tx
+    - '2'
+    - --ue-nb-ant-rx
+    - '2'
+    - -O
+    - /opt/oai/ue.conf
+    - --uecap_file 
+    - /opt/oai/uecap_ports2.xml
+  ue7:
+    image: oai-ue-test
+    container_name: oai-ue7
+    hostname: oai-ue7
+    privileged: true
+    volumes:
+    - ./ue7.conf:/opt/oai/ue.conf:ro
+    - ./uecap_ports2.xml:/opt/oai/uecap_ports2.xml:ro
+    networks:
+      ue_net:
+        ipv4_address: 172.30.0.17
+    command:
+    - /opt/oai/nr-uesoftmodem
+    - --rfsim
+    - -r
+    - '106'
+    - --numerology
+    - '1'
+    - --band
+    - '78'
+    - -C
+    - '3619200000'
+    - --ssb
+    - '516'
+    - --rfsimulator.serveraddr
+    - 192.168.1.85
+    - --ue-nb-ant-tx
+    - '2'
+    - --ue-nb-ant-rx
+    - '2'
+    - -O
+    - /opt/oai/ue.conf
+    - --uecap_file 
+    - /opt/oai/uecap_ports2.xml
+  ue8:
+    image: oai-ue-test
+    container_name: oai-ue8
+    hostname: oai-ue8
+    privileged: true
+    volumes:
+    - ./ue8.conf:/opt/oai/ue.conf:ro
+    - ./uecap_ports2.xml:/opt/oai/uecap_ports2.xml:ro
+    networks:
+      ue_net:
+        ipv4_address: 172.30.0.18
+    command:
+    - /opt/oai/nr-uesoftmodem
+    - --rfsim
+    - -r
+    - '106'
+    - --numerology
+    - '1'
+    - --band
+    - '78'
+    - -C
+    - '3619200000'
+    - --ssb
+    - '516'
+    - --rfsimulator.serveraddr
+    - 192.168.1.85
+    - --ue-nb-ant-tx
+    - '2'
+    - --ue-nb-ant-rx
+    - '2'
+    - -O
+    - /opt/oai/ue.conf
+    - --uecap_file 
+    - /opt/oai/uecap_ports2.xml
+  ue9:
+    image: oai-ue-test
+    container_name: oai-ue9
+    hostname: oai-ue9
+    privileged: true
+    volumes:
+    - ./ue9.conf:/opt/oai/ue.conf:ro
+    - ./uecap_ports2.xml:/opt/oai/uecap_ports2.xml:ro
+    networks:
+      ue_net:
+        ipv4_address: 172.30.0.19
+    command:
+    - /opt/oai/nr-uesoftmodem
+    - --rfsim
+    - -r
+    - '106'
+    - --numerology
+    - '1'
+    - --band
+    - '78'
+    - -C
+    - '3619200000'
+    - --ssb
+    - '516'
+    - --rfsimulator.serveraddr
+    - 192.168.1.85
+    - --ue-nb-ant-tx
+    - '2'
+    - --ue-nb-ant-rx
+    - '2'
+    - -O
+    - /opt/oai/ue.conf
+    - --uecap_file 
+    - /opt/oai/uecap_ports2.xml
+networks:
+  ue_net:
+    driver: bridge
+    ipam:
+      config:
+      - subnet: 172.30.0.0/24
