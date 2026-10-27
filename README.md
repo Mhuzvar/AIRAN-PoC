@@ -231,7 +231,343 @@ The bot is an interface to the agent, so users can directly interact with the ag
 
 ## OpenAirInterface
 
-TBA
+Follow this steps to achieve 5G connectivity in test environment on spark
+
+1. CORE NETWORK CONTAINERS 
+
+  Sitting inside of:
+    
+    ~/Documents/oai/openairinterface5g/ci-scripts/yaml_files/5g_rfsimulator 
+    
+  of the default user on spark, there is a set of pre-processed containers including SQL base for Users, AMF service and UPF.
+  
+  The miniture stack for basic task should be working with this command:
+  
+    docker compose up -d mysql oai-amf oai-smf oai-upf
+  
+  This should allow both base stations and user equipment to use basic 5g system applications such as Identity agent, user-plane etc.
+
+  ![Image 1](/img/AI-RAN-Core-Containers.png)
+
+  After all you should be able to see them in the output of:
+  
+    docker ps
+
+2. BASE STATION PROCES gnodeB:
+  
+  After running the 5G Core network you should be able to connect a base station in --rfsim mode to it by running this set of commands. 
+  It will create an virtual 5G gnodeB basestation for UE to connect to and process their data to core network.
+  
+  The file for running gnodeB sits inside of this folder of the default user on spark:
+  
+    ~/Documents/oai/openairinterface5g/cmake_targets/ran_build2/build 
+
+  The configuration file for the base_station lives here:
+
+    ~/Documents/oai/openairinterface5g/targets/PROJECTS/GENERIC-NR-5GC/CONF/gnb.sa.band78.fr1.106PRB.usrpb210.conf 
+
+  To open new base station session:
+  
+    sudo ./nr-softmodem -O ../../../targets/PROJECTS/GENERIC-NR-5GC/CONF/gnb.sa.band78.fr1.106PRB.usrpb210.conf --rfsim
+
+  If you want to use the base station with the graphical interface spectroscope try this:
+
+    sudo DISPLAY=<YOUR_IP>:0.0 LIBGL_ALWAYS_SOFTWARE=1 ./nr-softmodem -O ../../../targets/PROJECTS/GENERIC-NR-5GC/CONF/gnb.sa.band78.fr1.106PRB.usrpb210.conf --rfsim --telnetsrv -d
+
+  You'll have to have all the settings including the Xserver configured on both sides of the connections and connect to spark with a flag which allows for ssh graphical      transport ( ssh -Y user@server_ip ).
+  
+  This command will open the base station process in the foreground - You can run it without sudo but it will encounter some problems with interface
+  creation in system later on so it is recommended to run inside sudo. Output should be looking like that: 
+
+  ![Image 2](/img/gnb-running.png)
+
+  If you don't want to lose an entire terminal session for logs coming from this command you can also run:
+  
+    sudo ./nr-softmodem -O ../../../targets/PROJECTS/GENERIC-NR-5GC/CONF/gnb.sa.band78.fr1.106PRB.usrpb210.conf --rfsim > rfsim.log 2>&1 &
+
+  To run program with the possibility of telnet connection to rfsimulator use this one:
+
+    sudo ./nr-softmodem -O ../../../targets/PROJECTS/GENERIC-NR-5GC/CONF/gnb.sa.band78.fr1.106PRB.usrpb210.conf --rfsim --telnetsrv > rfsim.log 2>&1 &
+  
+  This one runs the proces in the background and collects logs and error logs into a separate .log file for future processing. If you wanna display current proces status:
+  
+    tail -f 30 ./gnodeB.log
+  
+  Then close it witch Ctrl + C
+
+3.  USER EQUIPMENT CONTAINER - UE
+
+  For emulating UE in --rfsim mode i prepared container with three users inside of it, just go to:
+  
+    ~/Documents/oai/openairinterface5g/cmake_targets/ran_build/build/oai-multi-ue
+  
+  Run docker compose up -d - and you'll see 3 of the containers running, and docker ps shows:
+
+  ![Image 3](/img/ue-containers.png)
+
+  The logs in the gnB should also change to this - it means the devices connected to the base station in rfsim mode:
+
+  ![Image 4](/img/ue-connected-to-gnb.png)
+
+4. ADDING ANOTHER UE
+
+  For adding more UE to the test you must first open the compose file inside of the UE container folder:
+  
+    ~/Documents/oai/openairinterface5g/cmake_targets/ran_build/build/oai-multi-ue/docker-compose.yml
+  
+  Then you add another container instance for new user and specify its configuration:
+  
+    ue<NEW_UE_NUBER>:
+        image: oai-ue
+        container_name: oai-ue<NEW_NUMBER>
+        privileged: true
+        volumes:
+          - ./ue<NEW_UE_NUMBER>.conf:/opt/oai/ue.conf:ro
+        networks:
+          ue_net:
+            ipv4_address: 172.30.0.<ANOTHER_ADDRESS_FOR_THE_DOCKER_NETWORK>
+        command:
+          - /opt/oai/nr-uesoftmodem
+          - --rfsim
+          - -r
+          - "106"
+          - --numerology
+          - "1"
+          - -C
+          - "3619200000"
+          - --rfsimulator.serveraddr
+          - "192.168.1.85"
+          - -O
+          - /opt/oai/ue.conf
+  
+  Change up the <NEW_UE_NUMBER> for new UE number eg. ue1, ue2, ue3, ue4 etc.
+  Change up the <ANOTHER_ADDRESS_FOR_THE_DOCKER_NETWORK> for free ipv4 host address inside the current docker network
+  
+  Then close up the file and create a new config file with the name specified in the <NEW_UE_NUMBER> variable:
+  
+    touch ./ue<NEW_UE_NUMBER>.conf
+  
+  Open it with your favourite text editor and past:
+  
+    uicc0 = {
+      imsi = "<NEW_UE_IMSI_NUMBER>";
+      key  = "fec86ba6eb707ed08905757b1bb44b8f";
+      opc  = "c42449363bbad02b66d16bc975d77cc1";
+    }
+    
+    nasconf = {
+      nr_ip_interface_name = "oaitun_ue3";
+    };
+
+  Change up the <NEW_UE_IMSI_NUMBER> for the number your new UE will be using to authenticate - easiest way is to increment the last ue's imsi by one
+
+  Add UE to Core network database:
+
+  execute the command - it will add the user to the database:
+
+    docker exec -it rfsim5g-mysql mysql -u root -p"linux" oai_db -e "
+      INSERT INTO users (imsi, msisdn, imei, imei_sv, ms_ps_status, rau_tau_timer, ue_ambr_ul, ue_ambr_dl, access_restriction, mme_cap, mmeidentity_idmmeidentity, \`key\`, \`RFSP-Index\`, urrp_mme, sqn, rand, OPc)
+      VALUES ('<NEW_UE_IMSI_NUMBER>', NULL, NULL, NULL, 'PURGED', 120, 50000000, 100000000, 47, NULL, 1,
+      UNHEX('fec86ba6eb707ed08905757b1bb44b8f'), 1, 0, 0,
+      UNHEX('00000000000000000000000000000000'),
+      UNHEX('c42449363bbad02b66d16bc975d77cc1'));
+      
+      INSERT INTO AccessAndMobilitySubscriptionData (ueid, servingPlmnid, nssai, subscribedUeAmbr)
+      VALUES ('<NEW_UE_IMSI_NUMBER>', '20899', '{\"defaultSingleNssais\": [{\"sst\": 1, \"sd\": \"FFFFFF\"}], \"singleNssais\": [{\"sst\": 1, \"sd\": \"FFFFFF\"}]}', '{\"uplink\": \"1000Mbps\", \"downlink\": \"1000Mbps\"}');
+      
+      INSERT INTO SessionManagementSubscriptionData (ueid, servingPlmnid, singleNssai, dnnConfigurations)
+      VALUES ('<NEW_UE_IMSI_NUMBER>', '20899', '{\"sst\": 1, \"sd\": \"FFFFFF\"}', '{\"oai\": {\"sscModes\": {\"defaultSscMode\": \"SSC_MODE_1\"}, \"sessionAmbr\": {\"uplink\": \"1000Mbps\", \"downlink\": \"1000Mbps\"}, \"5gQosProfile\": {\"5qi\": 6, \"arp\": {\"preemptCap\": \"NOT_PREEMPT\", \"preemptVuln\": \"PREEMPTABLE\", \"priorityLevel\": 15}, \"priorityLevel\": 1}, \"pduSessionTypes\": {\"defaultSessionType\": \"IPV4\"}}}');
+    "
+  
+  backup the base for safety measures:
+
+    docker exec rfsim5g-mysql mysqldump -u root -p"linux" oai_db > ~/Documents/oai/openairinterface5g/ci-scripts/yaml_files/5g_rfsimulator/oai_db.sql
+
+  Then restart the amf and smf-containers:
+
+    docker restart oai-amf oai-smf
+
+  And the compose with current users:
+
+    cd ~/Documents/oai/openairinterface5g/cmake_targets/ran_build/build/oai-multi-ue
+    docker compose down && docker compose up -d
+
+  Then you should be able to see new container with new UE inside docker ps
+
+  Note - If you're running nr-softmodem and nr-uesoftmodem with channelmod telnet utility please refer to the 6'th point to coordinate the addition of channel
+  model for the new UE in the simmulation.
+
+5. EXECUTING THE BANDWITH TEST VIA UE
+
+  After you set the lab environment and run as many UE as you want you can conduct the bandwith test using iperf3 utility built into theese containers.
+
+  First check your container tunnel ip address:
+
+    docker exec -it oai-ue<UE_NUM> ip -br a
+
+  Look for the oaitun_ue1 interface - for example:
+
+    mitlab-ai-edge-server@spark-6955:~$ docker exec -it oai-ue1 ip -br a
+    lo               UNKNOWN        127.0.0.1/8 ::1/128 
+    eth0@if438       UP             172.30.0.11/24 
+    oaitun_ue1       DOWN           12.1.1.3/24       <---------- This one is the spot
+
+  Change the <UE_NUM> for desired UE's number container
+
+  After checking grab a iperf3 server address and destination port eg lists:
+
+    - https://iperf.fr/iperf-servers.php
+    - https://iperf3serverlist.net
+    - https://github.com/R0GGER/public-iperf3-servers
+
+  Connect to iperf3 server using:
+    
+    docker exec -it oai-ue<UE_NUM> iperf3 -c <IPERF3_SERVER_ADDR> -p <IPERF3_DEST_PORT> -B <UE_TUN_IP_ADDR> -t <TEST_TIME> -b <DESIRED_BANDWIDTH>
+
+  Change the <UE_NUM> for desired UE container number for the test
+  Change the <IPERF3_SERVER_ADDR> to the target iperf3 public server address or domain name
+  Change the <IPERF3_DEST_PORT> to the destination port of public iperf3 server
+  Change the <UE_TUN_IP_ADDR> for the UE tunnel interface ip address gathered earlier
+  Change the <TEST_TIME> for 30 if u want 30s, 20 for 20s and so on - you can set it to 0 for constant test (until the server breaks the connection)
+  Change the <DESIRED_BANDWIDTH> to the bandwitdth you want ue to utilize for egzample 20M will be almost constant 20Mb/s during test
+
+  If it says network unreachable - you're doing sth wrong, if it says it's busy - you're doing everything right but the port is taken - try somewhere else
+
+  At the end it should be running like this:
+
+  ![Image 5](/img/iperf-on-gnb.png)
+
+  It will take 1 terminal per iperf session if you dont run it in background with '&' at the end
+
+  Utilize the test on many UE devices for more exact results
+
+  You can check the connectivity both from the logs from iperf that will appear if you run it in the foreground and if you check the gnodeB.log file 
+  during test using tail command:
+
+  ![Image 6](/img/gnb-test.png)
+
+  Sitting inside of the ~/scripts folder - you can find a file that does the connecting and performing an iperf3 test for you inside the:
+
+    run_ue_test.sh
+
+  You can utilize it using the:
+
+    ./run_ue_test.sh <Number of UE-containers to run>
+
+  It takes a whole terminal window to process logs but you can also run it in the background - after shutting down it should turn off the UE containers - but check with      the ps command and kill it if it doesn't stop.
+
+  6. CHANNELMOD AND TELNET SERVER TO GNODEB PROCESS
+
+  We're doing everything in an --rfsim up to this point. This means that all the radio connections between gnodeb and UE are emulated in oai process. 
+  Radio link parameters can be steered in this mode if you run the gnodeB with an telnet service.
+  
+  But before that we need to ensure to put the radio sim models into configuration file of gnodeB. Open the configuration file in text editor:
+
+    ~/Documents/oai/openairinterface5g/targets/PROJECTS/GENERIC-NR-5GC/CONF/gnb.sa.band78.fr1.106PRB.usrpb210.conf 
+
+  And ensure the models for channels are properly implemented in this section of the bottom of the document:
+
+    channelmod = {
+    
+      max_chan = 10;
+      modellist = "modellist_rfsimu_1";
+      
+      modellist_rfsimu_1 = (
+        { model_name = "rfsimu_channel_ue0"  type = "AWGN"; noise_power_dB = -100; },
+        { model_name = "rfsimu_channel_ue1"  type = "AWGN"; noise_power_dB = -100; },
+        { model_name = "rfsimu_channel_ue2"  type = "AWGN"; noise_power_dB = -100; }
+      );
+  
+    };
+
+  In this example we defined a model list for one downlink - "rfsimu_channel_enB0" and three uplinks from UE 0 to UE 2, defined their noise power and 
+  set the channels to AWGN - basically noise free channels. Remember each time you add a new UE to add it into the model list.
+
+  After that you can run the nr-softmodem program with a new --telnet flag - just ensure port 9090 is free in your system or change it in config file:
+
+    sudo ./nr-softmodem -O ../../../targets/PROJECTS/GENERIC-NR-5GC/CONF/gnb.sa.band78.fr1.106PRB.usrpb210.conf --rfsim --telnetsrv 
+
+  After running - you can connect to the steering process via telnet:
+
+    telnet 127.0.0.1 9090
+
+  You will be greeted with standard telnet connection info and can use help command to display list of available utilities:
+
+    Trying 127.0.0.1...
+    Connected to 127.0.0.1.
+    Escape character is '^]'.
+
+    softmodem_gnb> help
+       module 0 = telnet:
+          telnet [get set] debug <value>
+          telnet [get set] prio <value>
+          telnet [get set] loopc <value>
+          telnet [get set] loopd <value>
+          telnet [get set] phypb <value>
+          telnet [get set] hsize <value>
+          telnet [get set] hfile <value>
+          telnet [get set] logfile <value>
+          telnet redirlog [here,file,off]
+          telnet param [prio]
+          telnet history [list,reset]
+       module 1 = softmodem:
+          softmodem show loglvl|thread|config
+          softmodem log (enter help for details)
+          softmodem thread (enter help for details)
+          softmodem exit 
+          softmodem restart 
+       module 2 = loader:
+          loader [get set] mainversion <value>
+          loader [get set] defpath <value>
+          loader [get set] maxshlibs <value>
+          loader [get set] numshlibs <value>
+          loader show [params,modules]
+       module 3 = measur:
+          measur show groups | <group name> | inq
+          measur cpustats [enable | disable]
+          measur async [enable | disable]
+       module 4 = channelmod:
+          channelmod help 
+          channelmod show <predef,current>
+          channelmod modify <channelid> <param> <value>
+          channelmod show params <channelid> <param> <value>
+       module 5 = rfsimu:
+          rfsimu setmodel <model name> <model type>
+          rfsimu setdistance <model name> <distance>
+          rfsimu getdistance <model name>
+          rfsimu vtime 
+          rfsimu setbeam beam_map
+          rfsimu setbeamids beam_id1,beam_id2,...
+    softmodem_gnb> 
+
+  To display current available channels just use the:
+
+    channelmod show current
+
+  And you'll see the connections - those should be identical as the models defined in the config file:
+
+  ![Image 7](/img/channels-available-in-channelmod.png)
+
+  From now on you are able to change channel parameters in realtime - here's some examples:
+
+  Example 1. - Tunnel - pathloss and noise power up:
+
+    channelmod modify 2 noise_power_dB -35
+    channelmod modify 2 ploss 50
+
+  This results in an connection loss of the UE and constant retry to reconnect:
+
+  ![Image 7](/img/reconnect-in-tunnel.png)
+
+  To ensure the correct approach to channel assignation - the code of the rfsim was modified to set the channel for the UE via hostname so don't worry if your testing       breaks the connection temporarily.
+
+  There is also a script for the AI to learn from - it's callled:
+
+    ./catastrophe.sh
+
+  Running it from the ~/scripts folder sets a 10 minute long simulation of worsening radio connectivity conditions - you should definitely try it
+  
+
 
 ## Integration
 
