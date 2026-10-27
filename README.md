@@ -559,16 +559,6 @@ Follow this steps to achieve 5G connectivity in test environment on spark
 
   ![Image 7](/img/reconnect-in-tunnel.png)
 
-  To ensure the correct approach to channel assignation - the code of the rfsim was modified to set the channel for the UE via hostname so don't worry if your testing       breaks the connection temporarily.
-
-  There is also a script for the AI to learn from - it's callled:
-
-    ./catastrophe.sh
-
-  Running it from the ~/scripts folder sets a 10 minute long simulation of worsening radio connectivity conditions - you should definitely try it
-  
-
-
 ## Integration
 
 [spark_host](spark_host/) folder contains scripts to deploy once OAI and NemoClaw is set up.
