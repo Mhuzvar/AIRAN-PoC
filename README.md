@@ -5,6 +5,47 @@ PoC project for MITLab at NTUST under Taiwanese IIPP.
 
 “Maybe they could conduct a small-scale trial by developing an AI-RAN proof of concept controlled by Agentic AI, using NVIDIA Spark as an all-in-one platform to demonstrate both AI-for-RAN and AI-on-RAN capabilities”
 
+## Required packages
+
+Everything was tested with the following packages installed.
+
+| Package           | Version
+| ----------------- | -----------
+| annotated-types   | 0.8.0
+| anyio             | 4.14.2
+| certifi           | 2026.7.22
+| contourpy         | 1.3.3
+| cycler            | 0.12.1
+| distro            | 1.9.0
+| fonttools         | 4.64.0
+| h11               | 0.16.0
+| httpcore          | 1.0.9
+| httpx             | 0.28.1
+| idna              | 3.18
+| jiter             | 0.16.0
+| kiwisolver        | 1.5.1
+| matplotlib        | 3.11.1
+| numpy             | 2.5.2
+| openai            | 2.53.0
+| packaging         | 26.3
+| pandas            | 3.0.5
+| pillow            | 12.3.0
+| pip               | 24.0
+| py4j              | 0.10.9.9
+| pyarrow           | 25.0.0
+| pydantic          | 2.13.4
+| pydantic_core     | 2.46.4
+| pyparsing         | 3.3.2
+| pyspark           | 4.2.0
+| python-dateutil   | 2.9.0.post0
+| seaborn           | 0.13.2
+| six               | 1.17.0
+| sniffio           | 1.3.1
+| tqdm              | 4.70.0
+| typing_extensions | 4.16.0
+| typing-inspection | 0.4.2
+
+
 ## AI Agent
 
 All relevant scripts and config files are in [agent](agent/) folder.
@@ -14,7 +55,7 @@ If the agent is not running and should be, refer to [the other doc](agent_troubl
 
 To get to the dashboard, it should be possible to just open the browser (on the Spark) and go to `127.0.0.1:18789` or `127.0.0.1:18790`. The page is likely to ask for a token, which can be obtained by typing
 ```bash
-nemoclaw ayran-agent gateway-token
+nemoclaw ayran-sgl gateway-token
 ```
 in Spark terminal (host, outside of the sandbox).
 
@@ -73,7 +114,7 @@ Once running, you should see the IP (should be localhost) and port in the log. S
 
 Check your model(s) using `curl http://127.0.0.1:30000/v1/models`. This will be needed during onboarding.
 
-Once running `nemoclaw onboard`, pick "4) Other OpenAI-compatible endpoint" (or similar) and give the IP:port/v1 (`http://host.openshell.internal:30000/v1`[^3]), the set api key (`slang-local`) and the model name checked earlier (`Qwen/Qwen3.8-27B`).
+Once running `nemoclaw onboard`, pick "4) Other OpenAI-compatible endpoint" (or similar) and give the IP:port/v1 (`http://host.openshell.internal:30000/v1`[^3]), the set api key (`sglang-local`) and the model name checked earlier (`Qwen/Qwen3.8-27B`).
 
 [^3]: `127.0.0.1` points to the sandbox, so the host's local is different fromthe sandbox
 
@@ -679,6 +720,7 @@ Run as `python base_station.py sudo cgexec -g cpuset:oai_gnb path/to/oai/openair
 
 Takes base station dumpfiles and uploads them into the NemoClaw sandbox. Checks for files every `-w` seconds and deletes old ones if specified using `-c`.
 Theoretically should call an API, but actually steers via telnet.
+Needs existing [station_status.txt](runfiles/station_status.txt) to run.
 
 ### [agent/cron/infer_cron.sh](agent/cron/infer_cron.sh)
 

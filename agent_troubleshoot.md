@@ -11,7 +11,7 @@ openclaw dashboard
 ```
 This _should_ show you the URL and gateway token to open the dashboard in browser. If it doesn't give you the token, use
 ```bash
-nemoclaw ayran-agent gateway-token
+nemoclaw ayran-sgl gateway-token
 ```
 outside of the sandbox.
 
@@ -19,7 +19,7 @@ outside of the sandbox.
 
 Sometimes the agent refuses to start. Try
 ```bash
-nemoclaw ayran-agent rebuild --force
+nemoclaw ayran-sgl rebuild --force
 ```
 
 ## Making a Snapshot and Reloading it
@@ -28,23 +28,23 @@ If the container was restarted, the system falls into a deadlock and cannot do a
 
 
 ```bash
-nemoclaw ayran-agent shields down
-nemoclaw ayran-agent snapshot create --name pre-rebuild-$(date +%Y%m%d)
-nemoclaw ayran-agent download /sandbox/.openclaw/identity ./openclaw-identity-backup
-nemoclaw ayran-agent download /sandbox/.openclaw/devices ./openclaw-devices-backup
-nemoclaw ayran-agent shields up
+nemoclaw ayran-sgl shields down
+nemoclaw ayran-sgl snapshot create --name pre-rebuild-$(date +%Y%m%d)
+nemoclaw ayran-sgl download /sandbox/.openclaw/identity ./openclaw-identity-backup
+nemoclaw ayran-sgl download /sandbox/.openclaw/devices ./openclaw-devices-backup
+nemoclaw ayran-sgl shields up
 ```
 
 If the deadlock occurs, restore using the following:
 
 ```bash
-nemoclaw ayran-agent snapshot restore <the-snapshot-made-earlier>
-nemoclaw ayran-agent upload ./openclaw-identity-backup/device.json /sandbox/.openclaw/identity/device.json
-nemoclaw ayran-agent upload ./openclaw-identity-backup/device-auth.json /sandbox/.openclaw/identity/device-auth.json
-nemoclaw ayran-agent upload ./openclaw-devices-backup/paired.json /sandbox/.openclaw/devices/paired.json
-nemoclaw ayran-agent exec -- sh -c 'echo "{}" > /sandbox/.openclaw/devices/pending.json'
-nemoclaw ayran-agent exec -- openclaw gateway restart
-nemoclaw ayran-agent exec -- openclaw devices list --json
+nemoclaw ayran-sgl snapshot restore <the-snapshot-made-earlier>
+nemoclaw ayran-sgl upload ./openclaw-identity-backup/device.json /sandbox/.openclaw/identity/device.json
+nemoclaw ayran-sgl upload ./openclaw-identity-backup/device-auth.json /sandbox/.openclaw/identity/device-auth.json
+nemoclaw ayran-sgl upload ./openclaw-devices-backup/paired.json /sandbox/.openclaw/devices/paired.json
+nemoclaw ayran-sgl exec -- sh -c 'echo "{}" > /sandbox/.openclaw/devices/pending.json'
+nemoclaw ayran-sgl exec -- openclaw gateway restart
+nemoclaw ayran-sgl exec -- openclaw devices list --json
 ```
 
 > [!WARNING] 
@@ -89,7 +89,7 @@ nemoclaw ayran-sgl exec -- openclaw devices list --json
 
 If something went terribly wrong, the entire thing may need to be remade from scratch. First, make a backup of anything necessary. To delete the agent, use
 ```bash
-nemoclaw ayran-agent destroy
+nemoclaw ayran-sgl destroy
 ```
 which completely removes the agent along with the sandbox and anything inside. It is a good idea to reboot the system now, but it shouldn't be necessary. Once rebooted (or not), make a new agent using
 ```bash
